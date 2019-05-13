@@ -21,13 +21,21 @@ fi
 
 nix_file=`dirname $0`/default.nix
 
-target="$1"
+function to_expression {
+    if [ -f "$1" ]; then
+        echo "(import \"$1\" { inherit pkgs; })"
+    else
+        echo "$1"
+    fi
+}
+
+target=$(to_expression "$1")
 shift
 
 extraTargets=
 if [ "$#" -gt 1 ]; then
     while [ "$#" -gt 1 ]; do
-        extraTargets="$extraTargets $1"
+        extraTargets="$extraTargets $(to_expression $1)"
         shift
     done
 fi
@@ -43,6 +51,7 @@ elif ! [ -z "$extraTargets" ]; then
 fi
 
 expr="with import <nixpkgs> {}; with import $nix_file {}; $bootstrap { target = $target; extraTargets = [ $extraTargets ]; run = \"$exec\"; }"
+echo $expr
 
 out=$(nix-store --no-gc-warning -r $(nix-instantiate --no-gc-warning -E "$expr"))
 
